@@ -59,7 +59,7 @@ services:
 
   teleport:
 
-    image: public.ecr.aws/gravitational/teleport:18
+    image: public.ecr.aws/gravitational/teleport-distroless:18
 
     container_name: teleport
 
