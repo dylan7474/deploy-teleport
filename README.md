@@ -1,83 +1,38 @@
 # Teleport Docker Deployment for Debian 13
 
-This repository provides a simple deployment script for installing and running Teleport Community Edition in Docker on a Debian 13 host.
+A simple deployment script for installing and running Teleport Community Edition in Docker on a Debian 13 server.
 
-The script is intended for:
+## Overview
 
-- Home labs
-- Test environments
-- Proof of concepts
-- Small self-hosted deployments
-
-The deployment:
+This repository provides an automated deployment process that:
 
 - Installs Docker (if required)
-- Grants the local user access to Docker
-- Creates a Teleport deployment directory structure
+- Adds the current user to the Docker group
+- Creates the required Teleport directory structure
 - Generates a Docker Compose configuration
-- Deploys Teleport as a container
-- Configures automatic restart after host reboot
+- Deploys Teleport in a containerised environment
+- Configures automatic restart on host reboot
 
----
+## Prerequisites
 
-# Prerequisites
+- Debian 13
+- User account with sudo privileges
+- Internet connectivity
+- DNS record pointing to the host (recommended)
 
-Before running the installer ensure:
-
-- Debian 13 is installed and updated
-- The local user has sudo privileges
-- Internet access is available
-- A DNS name has been created for the Teleport server (recommended)
-
-Example:
-
-```text
-teleport.company.local
-teleport.example.com
-```
-
----
-
-# Installation
-
-Clone the repository:
+## Quick Start
 
 ```bash
 git clone https://github.com/dylan7474/deploy-teleport.git
-
 cd deploy-teleport
-```
-
-Make the script executable:
-
-```bash
 chmod +x deploy.sh
-```
-
-Run the installer:
-
-```bash
 ./deploy.sh
 ```
 
----
-
-# Docker Permissions
-
-The script adds the current user to the Docker group.
-
-After installation either:
+Log out and back in after installation:
 
 ```bash
 logout
-```
-
-and log back in,
-
-or reboot the server:
-
-```bash
-sudo reboot
 ```
 
 Verify Docker access:
@@ -86,13 +41,81 @@ Verify Docker access:
 docker ps
 ```
 
-No sudo should be required.
+Start Teleport:
 
----
+```bash
+cd /opt/teleport
+docker compose up -d
+```
 
-# Deployment Structure
+## Accessing Teleport
 
-The deployment creates:
+### Check Container Status
+
+```bash
+docker ps
+```
+
+You should see a running container named:
+
+```text
+teleport
+```
+
+### View Startup Logs
+
+```bash
+docker logs -f teleport
+```
+
+### Create the First Administrator Account
+
+```bash
+docker exec -it teleport tctl users add admin --roles=editor,access
+```
+
+Teleport will generate a registration URL.
+
+Example:
+
+```text
+https://teleport.example.com/web/invite/xxxxxxxxxxxxxxxx
+```
+
+Open the generated URL in a web browser.
+
+### Complete Registration
+
+Follow the wizard to:
+
+- Set a password
+- Configure MFA
+- Activate the administrator account
+
+### Login to Teleport
+
+Browse to:
+
+```text
+https://<server-name>
+```
+
+or
+
+```text
+https://<server-ip>
+```
+
+Examples:
+
+```text
+https://teleport.example.com
+https://192.168.1.50
+```
+
+Log in using the administrator account created above.
+
+## Deployment Structure
 
 ```text
 /opt/teleport
@@ -101,179 +124,96 @@ The deployment creates:
 └── docker-compose.yml
 ```
 
-Configuration:
+## Useful Commands
 
-```text
-/opt/teleport/config
-```
-
-Persistent Teleport data:
-
-```text
-/opt/teleport/data
-```
-
----
-
-# Starting Teleport
-
-Start the deployment:
+### Start
 
 ```bash
-cd /opt/teleport
-
 docker compose up -d
 ```
 
-Check status:
-
-```bash
-docker ps
-```
-
-View logs:
-
-```bash
-docker logs -f teleport
-```
-
----
-
-# Stopping Teleport
-
-Stop the container:
+### Stop
 
 ```bash
 docker compose down
 ```
 
-Restart:
+### Restart
 
 ```bash
 docker compose restart
 ```
 
----
-
-# Updating Teleport
-
-Pull the latest image:
-
-```bash
-docker compose pull
-```
-
-Restart the service:
-
-```bash
-docker compose up -d
-```
-
----
-
-# Initial Administrative User
-
-Create an administrative user:
-
-```bash
-docker exec -it teleport tctl users add admin
-```
-
-Teleport will display a registration URL.
-
-Open the URL in a browser and complete:
-
-- Password setup
-- MFA registration
-- Initial login
-
----
-
-# Useful Commands
-
-Container status:
-
-```bash
-docker ps
-```
-
-Container logs:
+### Logs
 
 ```bash
 docker logs -f teleport
 ```
 
-Open a shell inside the container:
-
-```bash
-docker exec -it teleport /bin/sh
-```
-
-Check Teleport version:
+### Version
 
 ```bash
 docker exec -it teleport teleport version
 ```
 
----
+## Firewall Requirements
 
-# Backups
+| Port | Purpose |
+|------|---------|
+| 443 | Web UI / HTTPS |
+| 3022 | SSH |
+| 3023 | Proxy |
+| 3024 | Reverse Tunnel |
+| 3025 | Auth Service |
 
-Back up the deployment directory:
+For most deployments only TCP 443 needs to be publicly accessible.
+
+## Updating Teleport
+
+```bash
+cd /opt/teleport
+docker compose pull
+docker compose up -d
+```
+
+## Backup
 
 ```bash
 sudo tar -czvf teleport-backup.tar.gz /opt/teleport
 ```
 
-To restore:
+## Troubleshooting
+
+Check Docker:
 
 ```bash
-sudo tar -xzvf teleport-backup.tar.gz -C /
+systemctl status docker
 ```
 
----
-
-# Uninstall
-
-Stop Teleport:
+Check Teleport:
 
 ```bash
-cd /opt/teleport
-
-docker compose down
+docker logs teleport
 ```
 
-Remove deployment files:
+Verify Docker group membership:
 
 ```bash
-sudo rm -rf /opt/teleport
+groups
 ```
 
-Remove Docker (optional):
-
-```bash
-sudo apt remove docker-ce docker-ce-cli containerd.io
-```
-
----
-
-# Security Notes
-
-This deployment is intended as a starter configuration.
+## Production Considerations
 
 For production environments consider:
 
-- Valid TLS certificates
-- Entra ID / Azure AD SSO
-- Regular backups
+- Trusted TLS certificates
+- Entra ID / Azure AD integration
 - Session recording
-- External database backend
-- High availability deployment
-- Reverse proxy hardening
-- Centralised logging and monitoring
+- Centralised logging
+- Monitoring and alerting
+- Regular backups
+- High availability design
 
----
+## Disclaimer
 
-# Disclaimer
-
-This deployment script is provided as-is for learning, testing and small deployments. Production environments should be reviewed and hardened according to organisational security requirements.
+This deployment is intended as a starter deployment for testing, evaluation and small self-hosted environments.
