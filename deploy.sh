@@ -46,10 +46,10 @@ sudo mkdir -p "${CONFIG_DIR}" "${DATA_DIR}"
 echo "==> Pulling image ${IMAGE}..."
 sudo docker pull "${IMAGE}"
 
-# 4. Generate default config if missing (omitting redundant 'teleport' binary call)
+# 4. Generate default config if missing (override entrypoint to run 'configure')
 if [ ! -f "${CONFIG_DIR}/teleport.yaml" ]; then
     echo "==> Generating default Teleport configuration..."
-    sudo docker run --rm "${IMAGE}" configure --cluster-name="${CLUSTER_NAME}" | sudo tee "${CONFIG_DIR}/teleport.yaml" > /dev/null
+    sudo docker run --rm --entrypoint teleport "${IMAGE}" configure --cluster-name="${CLUSTER_NAME}" | sudo tee "${CONFIG_DIR}/teleport.yaml" > /dev/null
 fi
 
 # 5. Clean up existing container instance if present
@@ -59,7 +59,7 @@ if sudo docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     sudo docker rm "${CONTAINER_NAME}" || true
 fi
 
-# 6. Launch Teleport Container
+# 6. Launch Teleport Container (uses default image entrypoint: teleport start)
 echo "==> Launching Teleport container..."
 sudo docker run -d \
   --name "${CONTAINER_NAME}" \
@@ -72,7 +72,7 @@ sudo docker run -d \
   -p 3024:3024 \
   -p 3025:3025 \
   -p 3080:3080 \
-  "${IMAGE}" start
+  "${IMAGE}"
 
 echo "==> Deployment complete!"
 sudo docker ps --filter "name=${CONTAINER_NAME}"
