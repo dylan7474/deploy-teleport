@@ -46,10 +46,10 @@ sudo mkdir -p "${CONFIG_DIR}" "${DATA_DIR}"
 echo "==> Pulling image ${IMAGE}..."
 sudo docker pull "${IMAGE}"
 
-# 4. Generate default config if missing
+# 4. Generate default config if missing (omitting redundant 'teleport' binary call)
 if [ ! -f "${CONFIG_DIR}/teleport.yaml" ]; then
     echo "==> Generating default Teleport configuration..."
-    sudo docker run --rm "${IMAGE}" teleport configure --cluster-name="${CLUSTER_NAME}" | sudo tee "${CONFIG_DIR}/teleport.yaml" > /dev/null
+    sudo docker run --rm "${IMAGE}" configure --cluster-name="${CLUSTER_NAME}" | sudo tee "${CONFIG_DIR}/teleport.yaml" > /dev/null
 fi
 
 # 5. Clean up existing container instance if present
